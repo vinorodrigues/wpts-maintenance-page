@@ -8,32 +8,32 @@
  * Author URI: http://vinorodrigues.com
 **/
 
+function __tsmp_fill_with($path, &$list) {
+	$list[] = $path . '503.php';
+	$list[] = $path . '503.html';
+	// $list[] = $path . '503.htm';
+}
+
 /**
  */
 function tsmp_find_maintenance_file($all = false) {
 	$filelist = array(false);
 
-	function __fill_with($path, &$list) {
-		$list[] = $path . '503.php';
-		$list[] = $path . '503.html';
-		// $list[] = $path . '503.htm';
-	}
-
 	// Wordpress default
 	$filelist[] = trailingslashit(WP_CONTENT_DIR) . 'maintenance.php';
 
 	// Root of website
-	__fill_with( ABSPATH, $filelist);
+	__tsmp_fill_with( ABSPATH, $filelist);
 
 	// Child theme folder
 	if (is_child_theme())
-		__fill_with( trailingslashit(get_stylesheet_directory()), $filelist );
+		__tsmp_fill_with( trailingslashit(get_stylesheet_directory()), $filelist );
 
 	// Theme folder (parent theme)
-	__fill_with( trailingslashit(get_template_directory()), $filelist );
+	__tsmp_fill_with( trailingslashit(get_template_directory()), $filelist );
 
 	// This plugin folder
-	__fill_with( trailingslashit(plugin_dir_path(__FILE__)), $filelist );
+	__tsmp_fill_with( trailingslashit(plugin_dir_path(__FILE__)), $filelist );
 
 	// List is done, now find the first file
 	for ($i=1; $i < count($filelist); $i++) {
@@ -48,15 +48,42 @@ function tsmp_find_maintenance_file($all = false) {
 
 include_once 'mp-opt.php';
 
+if (!function_exists('today')) {
+	function today() {
+		return mktime(0, 0, 0);
+	}
+}
+
 function tsmp_template_redirect() {
 	$options = get_option( 'tsmp_settings' );
 	if ( !isset($options['maint_mode']) || ($options['maint_mode'] != 1) ) return;
 
-	if (!isset($options['maint_allow']) || empty($options['maint_allow']))
-		$options['maint_allow'] = 'administrator';
+	$user = wp_get_current_user();
+	if (is_object($user) && ($user->ID != 0)) {
+		if (!isset($options['maint_allow']) || empty($options['maint_allow']))
+			$options['maint_allow'] = false;
+		switch ($options['maint_allow']) {
+			case 'editor':
+				$allowed_roles = array('administrator', 'editor');
+				break;
+			case 'author':
+				$allowed_roles = array('administrator', 'editor', 'author');
+				break;
+			case 'subscriber':
+				$allowed_roles = array('administrator', 'editor', 'author', 'subscriber');
+				break;
+			default:
+				$allowed_roles = array('administrator');
+		}
 
-	//** find if user is permited to view
-	if (current_user_can( $options['maint_allow'] )) return;
+		//** find if user is permited to view
+		if ( array_intersect($allowed_roles, $user->roles) ) return;
+	}
+
+	//** fix retry time
+	$options['maint_retry'] = @strtotime($options['maint_retry']);
+	if (($options['maint_retry'] === false) || ($options['maint_retry'] <= today()))
+	 	$options['maint_retry'] = mktime( date("H"), date("i")+10 );  // 10 min from now
 
 	//** find the redirection file
 	if (isset($options['maint_file']) && file_exists($options['maint_file'])) {
@@ -81,12 +108,12 @@ function tsmp_template_redirect() {
 	header( $protocol . ' 503 Service Temporarily Unavailable', true, 503 );
 	header( 'Status: 503 Service Temporarily Unavailable' );
 	header( 'Content-Type: text/html; charset=utf-8' );
-	header( 'Retry-After: ' . date('r', $options['maint_return']) );
+	header( 'Retry-After: ' . date('r', $options['maint_retry']) );
 	//** set up cache
 	header( 'Cache-Control: public' );
-	header( 'Expires: ' . date('r', $options['maint_return']) );
+	header( 'Expires: ' . date('r', $options['maint_retry']) );
 	// header( 'vary: User-Agent');
-	header( 'ETag: "' . date('YmdHis', $options['maint_return']) . '-tsmp"' );
+	header( 'ETag: "' . date('YmdHis', $options['maint_retry']) . '-tsmp"' );
 
 	//** if file is htm or html then output it's contents.
 	if ($fn) {
@@ -104,8 +131,8 @@ function tsmp_template_redirect() {
 <body>
 	<h1><?php _e( 'Unavailable for scheduled maintenance.' ); ?></h1>
 	<p><?php echo sprintf(__('Retry after %s at %s UTC'),
-		date(get_option( 'date_format' ), $options['maint_return']),
-		date(get_option( 'time_format' ), $options['maint_return']) ); ?></p>
+		date(get_option( 'date_format' ), $options['maint_retry']),
+		date(get_option( 'time_format' ), $options['maint_retry']) ); ?></p>
 </body>
 </html>
 <?php

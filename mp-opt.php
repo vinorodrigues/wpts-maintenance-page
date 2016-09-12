@@ -41,9 +41,9 @@ function tsmp_settings_init() {
 		'main' );
 
 	add_settings_field(
-		'maint_return',
+		'maint_retry',
 		'Expected return date',
-		'maint_return_render',
+		'maint_retry_render',
 		'tsmp_settings',
 		'main' );
 }
@@ -128,7 +128,7 @@ function maint_mode_render() {
 	$options = get_option( 'tsmp_settings' );
 	?><label for="tsmp-maint-mode">
 	<input type="checkbox" name="tsmp_settings[maint_mode]" <?php checked( $options['maint_mode'], 1 ); ?> value="1" id="tsmp-maint-mode">
-	Activate
+	Check here to turn maintenance mode on.
 	</label>
 	<?php
 }
@@ -151,13 +151,15 @@ function maint_allow_render() {
 	<?php
 }
 
-function maint_return_render() {
+function maint_retry_render() {
 	$options = get_option( 'tsmp_settings' );
-	if (!isset($options['maint_return']) || empty($options['maint_return']))
-		$options['maint_return'] = time();
+	if (!isset($options['maint_retry']) || empty($options['maint_retry']))
+		$options['maint_retry'] = date('Y-m-d');
+
 	?>
-	<input type="datetime-local" name="tsmp_settings[maint_return]" value="<?php
-		echo date('Y-m-d\TH:i', $options['maint_return']); ?>" step="60"> <b>UTC</b>
+	<input type="date" name="tsmp_settings[maint_retry]" value="<?php
+		echo $options['maint_retry']; ?>" min="<?php echo date('Y-m-d'); ?>">
+	<p class="description">Seting the time to today (or before) will recomend a retry in 10min's. </p>
 	<?php
 }
 
@@ -170,14 +172,13 @@ function tsmp_settings_validate($input) {
 
 	$options['maint_allow'] = $input['maint_allow'];
 
-	if ($changed && ($options['maint_mode'] == 1)) {
-		$dt = @strtotime($input['maint_return']);  // hopefully it comes as '2016-09-15T03:00' format
-		if ($dt === false) $dt = '';
+	$t = @strtotime($input['maint_retry']);  // hopefully it comes as '2016-09-15' format
+	if ($t === false) $t = time();
+	$options['maint_retry'] = date('Y-m-d', $t);
 
+	if ($changed && ($options['maint_mode'] == 1)) {
 		$options['maint_file'] = tsmp_find_maintenance_file();
-	} else
-		$dt = '';
-	$options['maint_return'] = $dt;
+	}
 
 	return $options;
 }
