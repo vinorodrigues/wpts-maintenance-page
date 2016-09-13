@@ -4,11 +4,12 @@
  * Plugin URI: http://tecsmith.com.au
  * Description: Maintenance Page plugin
  * Author: Vino Rodrigues
- * Version: 0.9.0
+ * Version: 1.0.0
  * Author URI: http://vinorodrigues.com
 **/
 
 function __tsmp_fill_with($path, &$list) {
+	$path = trailingslashit($path);
 	$list[] = $path . '503.php';
 	$list[] = $path . '503.html';
 	// $list[] = $path . '503.htm';
@@ -25,15 +26,18 @@ function tsmp_find_maintenance_file($all = false) {
 	// Root of website
 	__tsmp_fill_with( ABSPATH, $filelist);
 
+	// Root of uploads folder
+	__tsmp_fill_with( wp_upload_dir(null, false)['basedir'], $filelist );
+
 	// Child theme folder
 	if (is_child_theme())
-		__tsmp_fill_with( trailingslashit(get_stylesheet_directory()), $filelist );
+		__tsmp_fill_with( get_stylesheet_directory(), $filelist );
 
 	// Theme folder (parent theme)
-	__tsmp_fill_with( trailingslashit(get_template_directory()), $filelist );
+	__tsmp_fill_with( get_template_directory(), $filelist );
 
 	// This plugin folder
-	__tsmp_fill_with( trailingslashit(plugin_dir_path(__FILE__)), $filelist );
+	__tsmp_fill_with( plugin_dir_path(__FILE__), $filelist );
 
 	// List is done, now find the first file
 	for ($i=1; $i < count($filelist); $i++) {

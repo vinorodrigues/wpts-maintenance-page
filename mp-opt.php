@@ -60,7 +60,7 @@ function tsmp_admin_notices() {
 			'maint_mode',
 			'<span class="dashicons dashicons-hidden"></span> ' .
 			'Your site is in <a style="text-transform:uppercase"' .
-			' href="' . admin_url('admin.php?page=wpts-maintenance-page-master') . '"' .
+			' href="' . admin_url('admin.php?page='.TSMP_PLUGIN_SLUG) . '"' .
 			'>maintenance mode</a>!');
 	}
 }
@@ -81,7 +81,7 @@ function tsmp_admin_bar_menu( $wp_admin_bar ) {
 			'group'  => null,
 			'title'  => '<span class="ab-icon dashicons dashicons-hidden"></span>' .
 				'<span class="ab-label" style="text-transform:uppercase">Maintenance mode</span>',
-			'href'   => admin_url('admin.php?page=wpts-maintenance-page-master'),
+			'href'   => admin_url('admin.php?page='.TSMP_PLUGIN_SLUG),
 			'meta'   => array(
 				'target' => '_self',
 				'title'  => 'Your site is in Maintenance Mode!',
@@ -97,7 +97,7 @@ function tsmp_add_admin_menu() {
 	if ( function_exists('add_tecsmith_page') )
 		add_tecsmith_page(
 			'TS Maintenance Page',
-			'Maintenance Page',
+			'Maintenance Mode',
 			'manage_options',
 			TSMP_PLUGIN_SLUG,
 			'tsmp_options_page',
@@ -237,5 +237,17 @@ function tsmp_options_page() {
 </div>
 <?php
 }
+
+/**
+* Plugin page settings link
+ */
+function tsmp_plugin_action_links( $links ) {
+	$link = 'admin.php?page=' . TSMP_PLUGIN_SLUG;
+	$link = '<a href="'.esc_url( get_admin_url(null, $link) ).'">'.__('Settings').'</a>';
+	array_unshift($links, $link);
+	return $links;
+}
+
+add_filter( 'plugin_action_links_'.dirname(plugin_basename(__FILE__)).'/maintenance-page.php', 'tsmp_plugin_action_links' );
 
 // eof
