@@ -126,6 +126,9 @@ function tsmp_section_main_text() {
 
 function maint_mode_render() {
 	$options = get_option( 'tsmp_settings' );
+	if (!isset($options['maint_mode']) || empty($options['maint_mode']))
+		$options['maint_mode'] = 0;
+
 	?><label for="tsmp-maint-mode">
 	<input type="checkbox" name="tsmp_settings[maint_mode]" <?php checked( $options['maint_mode'], 1 ); ?> value="1" id="tsmp-maint-mode">
 	Check here to turn maintenance mode on.
@@ -135,9 +138,6 @@ function maint_mode_render() {
 
 function maint_allow_render() {
 	$options = get_option( 'tsmp_settings' );
-
-	// var_dump_pre($options); die();
-
 	if (!isset($options['maint_allow']) || empty($options['maint_allow']))
 		$options['maint_allow'] = 'administrator';
 	?>

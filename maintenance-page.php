@@ -59,6 +59,9 @@ if (!function_exists('today')) {
 }
 
 function tsmp_template_redirect() {
+	if ( isset($_GET['503']) ) goto nocheck;  // test function
+	// Goto??? Wow... since when?  Yup, bad practice, but this is the quickest way.
+
 	$options = get_option( 'tsmp_settings' );
 	if ( !isset($options['maint_mode']) || ($options['maint_mode'] != 1) ) return;
 
@@ -84,10 +87,14 @@ function tsmp_template_redirect() {
 		if ( array_intersect($allowed_roles, $user->roles) ) return;
 	}
 
+	nocheck:;
+
+	global $upgrading;
+
 	//** fix retry time
-	$options['maint_retry'] = @strtotime($options['maint_retry']);
-	if (($options['maint_retry'] === false) || ($options['maint_retry'] <= today()))
-	 	$options['maint_retry'] = mktime( date("H"), date("i")+10 );  // 10 min from now
+	$upgrading = @strtotime($options['maint_retry']);
+	if (($upgrading === false) || ($upgrading <= today()))
+	 	$upgrading = mktime( date("H"), date("i")+10 );  // 10 min from now
 
 	//** find the redirection file
 	if (isset($options['maint_file']) && file_exists($options['maint_file'])) {
@@ -112,12 +119,12 @@ function tsmp_template_redirect() {
 	header( $protocol . ' 503 Service Temporarily Unavailable', true, 503 );
 	header( 'Status: 503 Service Temporarily Unavailable' );
 	header( 'Content-Type: text/html; charset=utf-8' );
-	header( 'Retry-After: ' . date('r', $options['maint_retry']) );
+	header( 'Retry-After: ' . date('r', $upgrading) );
 	//** set up cache
 	header( 'Cache-Control: public' );
-	header( 'Expires: ' . date('r', $options['maint_retry']) );
-	// header( 'vary: User-Agent');
-	header( 'ETag: "' . date('YmdHis', $options['maint_retry']) . '-tsmp"' );
+	header( 'Expires: ' . date('r', $upgrading) );
+	header( 'vary: User-Agent');
+	header( 'ETag: "' . date('YmdHis', $upgrading) . '-tsmp"' );
 
 	//** if file is htm or html then output it's contents.
 	if ($fn) {
@@ -135,8 +142,8 @@ function tsmp_template_redirect() {
 <body>
 	<h1><?php _e( 'Unavailable for scheduled maintenance.' ); ?></h1>
 	<p><?php echo sprintf(__('Retry after %s at %s UTC'),
-		date(get_option( 'date_format' ), $options['maint_retry']),
-		date(get_option( 'time_format' ), $options['maint_retry']) ); ?></p>
+		date(get_option( 'date_format' ), $upgrading),
+		date(get_option( 'time_format' ), $upgrading) ); ?></p>
 </body>
 </html>
 <?php
